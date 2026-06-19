@@ -45,7 +45,12 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    return {"message": "User created successfully"}
+    return {
+        "id": new_user.id,
+        "email": new_user.email,
+        "name": new_user.name,
+        "message": "User created successfully"
+    }
 
 @app.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
@@ -58,4 +63,10 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         SECRET_KEY,
         algorithm=ALGORITHM
     )
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "id": user.id,
+        "email": user.email,
+        "name": user.name
+    }
