@@ -8,6 +8,15 @@ from models import User
 from datetime import datetime, timedelta
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],             # Allows your Flutter web app (localhost) to connect
+    allow_credentials=True,
+    allow_methods=["*"],             # Dynamically handles OPTIONS, POST, GET, etc.
+    allow_headers=["*"],             # Allows authorization tokens and content-type headers
+)
+
 pwd_context = CryptContext(schemes=["bcrypt"])
 SECRET_KEY = "dev-secret-key-change-later"
 ALGORITHM = "HS256"
