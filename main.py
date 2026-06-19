@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database import engine, Base, get_db
 from models import User
 from datetime import datetime, timedelta
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
