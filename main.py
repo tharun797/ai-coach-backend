@@ -33,11 +33,11 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="User already exists")
     
     hashed_pw = pwd_context.hash(data.password)
-    new_user = {
-        "email": data.email,
-        "name": data.name,
-        "password": hashed_pw,
-    }
+    new_user =User(
+         email=data.email,
+        name=data.name,
+        hashed_password=hashed_pw,
+    )  
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -47,7 +47,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 @app.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
-    if not user or not pwd_context.verify(data.password, user["password"]):
+    if not user or not pwd_context.verify(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     expire = datetime.utcnow() + timedelta(days=7)
