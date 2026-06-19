@@ -15,7 +15,7 @@ pwd_context = CryptContext(schemes=["bcrypt"])
 SECRET_KEY = "dev-secret-key-change-later"
 ALGORITHM = "HS256"
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 class RegisterRequest(BaseModel):
     email: str
