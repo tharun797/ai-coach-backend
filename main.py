@@ -1,11 +1,15 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from pydantic import BaseModel
 from passlib.context import CryptContext
 from jose import jwt
 from sqlalchemy.orm import Session
 from database import engine, Base, get_db
-from models import User
+from models import Resume, User
 from datetime import datetime, timedelta
+import os
+import shutil
+import pdfplumber
+from fastapi import UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -21,6 +25,53 @@ app.add_middleware(
 pwd_context = CryptContext(schemes=["bcrypt"])
 SECRET_KEY = "dev-secret-key-change-later"
 ALGORITHM = "HS256"
+
+
+UPLOAD_DIR = "uploads/resumes"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+def extract_text_from_pdf(file_path: str) -> str:
+    text = ""
+    with pdfplumber.open(file_path) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+    return text
+
+
+@app.post("/resume/upload")
+def upload_resume(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+
+):
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+        extract_text = extract_text_from_pdf(file_path)
+
+        new_resume = Resume(
+            user_id=1,
+            file_path=file_path,
+            extract_text=extract_text,
+        )
+        
+        db.add(new_resume)
+        db.commit()
+        db.refresh(new_resume)
+
+        return {
+            "resume_id" : new_resume.id,
+            "message": "Message uploaded successfully!",
+            "extracted_text_preview": extract_text[:300]
+        }
+
+
+
+
+
 
 class RegisterRequest(BaseModel):
     email: str
