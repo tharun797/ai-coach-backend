@@ -10,6 +10,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     name = Column(String)
     hashed_password = Column(String)
+    resumes = relationship("Resume", back_populates="user")
 
 
 
