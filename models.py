@@ -5,7 +5,6 @@ from sqlalchemy.orm import relationship
 
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = {'schema': 'public'}
 
     id = Column(Integer, primary_key=True, index=True )
     email = Column(String, unique=True, index=True)
@@ -24,13 +23,13 @@ class Resume(Base):
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="resumes")
-    questions = relationship("Question", back_populates="resumes")
+    questions = relationship("Question", back_populates="resume")
 
 
 class Question(Base):
     __tablename__ = "questions"
     id = Column(Integer, primary_key=True, index=True)
-    resume_id = Column(Integer, ForeignKey("resume.id"))
+    resume_id = Column(Integer, ForeignKey("resumes.id"))
     question_text = Column(Text)
     category = Column(String, nullable=True)
     
