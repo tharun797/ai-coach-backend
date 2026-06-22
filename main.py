@@ -44,32 +44,27 @@ def extract_text_from_pdf(file_path: str) -> str:
 def upload_resume(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-
 ):
     file_path = os.path.join(UPLOAD_DIR, file.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-        extract_text = extract_text_from_pdf(file_path)
+    extracted_text = extract_text_from_pdf(file_path)  # ← outside the with block
 
-        new_resume = Resume(
-            user_id=1,
-            file_path=file_path,
-            extract_text=extract_text,
-        )
-        
-        db.add(new_resume)
-        db.commit()
-        db.refresh(new_resume)
+    new_resume = Resume(
+        user_id=1,
+        file_path=file_path,
+        extracted_text=extracted_text,
+    )
+    db.add(new_resume)
+    db.commit()
+    db.refresh(new_resume)
 
-        return {
-            "resume_id" : new_resume.id,
-            "message": "Message uploaded successfully!",
-            "extracted_text_preview": extract_text[:300]
-        }
-
-
-
+    return {
+        "resume_id": new_resume.id,
+        "message": "Resume uploaded successfully!",
+        "extracted_text_preview": extracted_text[:300]
+    }
 
 
 
