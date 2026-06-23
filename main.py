@@ -13,8 +13,6 @@ import pdfplumber
 import google.generativeai as genai
 import json
 
-
-
 app = FastAPI()
 
 app.add_middleware(
@@ -31,8 +29,6 @@ ALGORITHM = "HS256"
 UPLOAD_DIR = "uploads/resumes"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
-
 Base.metadata.create_all(bind=engine)
 
 
@@ -44,7 +40,7 @@ def generative_questions(extracted_text: str) -> list:
 
     Return ONLY a JSON array of objects like this:
     [
-        {{"question": "Tell me about your experience with...", "category": "Technical"}}
+        {{"question": "Tell me about your experience with...", "category": "Technical"}},
         {{"question": "Describe a time when...", "category": "Behavioral"}}
     ]
 
@@ -52,7 +48,7 @@ def generative_questions(extracted_text: str) -> list:
     {extracted_text}
     """
 
-    response = model.generative_content(prompt)
+    response = model.generate_content(prompt)
     text = response.text.strip()
 
     if text.startswith("```"):
@@ -60,8 +56,7 @@ def generative_questions(extracted_text: str) -> list:
         if text.startswith("json"):
             text = text[4:]
     
-    return json.loads(text.string())
-
+    return json.loads(text.strip())
 
 
 # ── helpers ──────────────────────────────────────────────
@@ -145,10 +140,11 @@ def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
         db.add(question)
         saved_questions.append({"question": q["question"], "category": q.get("category")})
 
-        db.commit()
+    db.commit()
 
     return {
         "resume_id": new_resume.id,
         "message": "Resume uploaded successfully!",
+        "questions": saved_questions,
         "extracted_text_preview": extracted_text[:300]
     }
