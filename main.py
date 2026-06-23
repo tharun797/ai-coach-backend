@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import os
 import shutil
 import pdfplumber
-from google import genai
+from groq import Groq
 import json
 
 app = FastAPI()
@@ -28,38 +28,38 @@ SECRET_KEY = "dev-secret-key-change-later"
 ALGORITHM = "HS256"
 UPLOAD_DIR = "uploads/resumes"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 Base.metadata.create_all(bind=engine)
 
 
 def generative_questions(extracted_text: str) -> list:
+    response =client.chat.completions.create(
+        model = "llama-3.3-70b-versatile",
+        messages = [
+            {
+                "role": "user",
+                "content": f""" 
+                  You are an expert interview coach. Based on the resume below, generate 10 relevant questions.
+                  Return ONLY a JSON array of objects like this:
+                    [
+                        {{"question": "Tell me about your experience with...", "category": "Technical"}},
+                        {{"question": "Describe a time when...", "category": "Behavioral"}}
+                    ]
+                     Resume:
+                    {extracted_text}
 
-    prompt= f"""
-    You are an expert interview coach. Based on the resume below, generate 10 relevant questions.
-
-    Return ONLY a JSON array of objects like this:
-    [
-        {{"question": "Tell me about your experience with...", "category": "Technical"}},
-        {{"question": "Describe a time when...", "category": "Behavioral"}}
-    ]
-
-    Resume:
-    {extracted_text}
-    """
-
-    response =client.models.generate_content(
-        model = "gemini-2.0-flash",
-        contents = prompt,
+                    """
+            }
+        ],
+        response_format={"type": "json_object"},
     )
 
-    text = response.text.strip()
+    result = json.loads(response.choices[0].message.content)
 
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
+    if isinstance(result, list):
+        return result
     
-    return json.loads(text.strip())
+    return result.get("questions", result.get("items", []))
 
 
 # ── helpers ──────────────────────────────────────────────
