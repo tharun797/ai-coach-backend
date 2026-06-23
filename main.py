@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from passlib.context import CryptContext
+import bcrypt
 from jose import jwt
 from sqlalchemy.orm import Session
 from database import engine, Base, get_db
@@ -23,7 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-pwd_context = CryptContext(schemes=["bcrypt"])
+# pwd_context = CryptContext(schemes=["bcrypt"])
 SECRET_KEY = "dev-secret-key-change-later"
 ALGORITHM = "HS256"
 UPLOAD_DIR = "uploads/resumes"
@@ -87,7 +87,25 @@ class LoginRequest(BaseModel):
     password: str
 
 
+
 # ── routes ───────────────────────────────────────────────
+
+# ── Password Hashing Helpers ──────────────────────────────
+
+def get_password_hash(password: str) -> str:
+    """Hashes a plain text password using native bcrypt."""
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed_password.decode('utf-8')
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verifies a plain text password against a hashed password string."""
+    return bcrypt.checkpw(
+        plain_password.encode('utf-8'), 
+        hashed_password.encode('utf-8')
+    )
 
 @app.post("/register")
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
@@ -95,7 +113,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
 
-    hashed_pw = pwd_context.hash(data.password)
+    hashed_pw =get_password_hash(data.password)
     new_user = User(email=data.email, name=data.name, hashed_password=hashed_pw)
     db.add(new_user)
     db.commit()
@@ -107,7 +125,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 @app.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
-    if not user or not pwd_context.verify(data.password, user.hashed_password):
+    if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     expire = datetime.utcnow() + timedelta(days=7)
