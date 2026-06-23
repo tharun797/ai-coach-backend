@@ -10,6 +10,10 @@ from datetime import datetime, timedelta
 import os
 import shutil
 import pdfplumber
+import google.generativeai as genai
+import json
+
+
 
 app = FastAPI()
 
@@ -26,8 +30,38 @@ SECRET_KEY = "dev-secret-key-change-later"
 ALGORITHM = "HS256"
 UPLOAD_DIR = "uploads/resumes"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
 
 Base.metadata.create_all(bind=engine)
+
+
+def generative_questions(extracted_text: str) -> list:
+    model = genai.GenerativeModel("gemini-1.5-flash")
+
+    prompt= f"""
+    You are an expert interview coach. Based on the resume below, generate 10 relevant questions.
+
+    Return ONLY a JSON array of objects like this:
+    [
+        {{"question": "Tell me about your experience with...", "category": "Technical"}}
+        {{"question": "Describe a time when...", "category": "Behavioral"}}
+    ]
+
+    Resume:
+    {extracted_text}
+    """
+
+    response = model.generative_content(prompt)
+    text = response.text.strip()
+
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    
+    return json.loads(text.string())
+
 
 
 # ── helpers ──────────────────────────────────────────────
@@ -97,6 +131,21 @@ def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
     db.add(new_resume)
     db.commit()
     db.refresh(new_resume)
+
+    questions_data = generative_questions(extracted_text)
+
+    ##save questions to db
+    saved_questions = []
+    for q in questions_data:
+        question = Question(
+            resume_id=new_resume.id,
+            question_text=q['question'],
+            category=q.get("category", "General"),
+        )
+        db.add(question)
+        saved_questions.append({"question": q["question"], "category": q.get("category")})
+
+        db.commit()
 
     return {
         "resume_id": new_resume.id,
