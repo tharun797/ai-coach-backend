@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import os
 import shutil
 import pdfplumber
-import google.generativeai as genai
+from google import genai
 import json
 
 app = FastAPI()
@@ -28,12 +28,11 @@ SECRET_KEY = "dev-secret-key-change-later"
 ALGORITHM = "HS256"
 UPLOAD_DIR = "uploads/resumes"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 Base.metadata.create_all(bind=engine)
 
 
 def generative_questions(extracted_text: str) -> list:
-    model = genai.GenerativeModel("gemini-1.5-flash")
 
     prompt= f"""
     You are an expert interview coach. Based on the resume below, generate 10 relevant questions.
@@ -48,7 +47,11 @@ def generative_questions(extracted_text: str) -> list:
     {extracted_text}
     """
 
-    response = model.generate_content(prompt)
+    response =client.models.generate_content(
+        model = "gemini-1.5-flash",
+        contents = prompt,
+    )
+    
     text = response.text.strip()
 
     if text.startswith("```"):
