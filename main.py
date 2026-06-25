@@ -136,6 +136,11 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer", "id": user.id, "email": user.email, "name": user.name, "resumeCount": resume_count,}
 
 
+@app.post("/session")
+def updateSession(id: id, db: Session = Depends(get_db)):
+    user = db.query(User)
+
+
 @app.post("/resume/upload")
 def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
     file_path = os.path.join(UPLOAD_DIR, file.filename)
@@ -146,6 +151,7 @@ def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
     extracted_text = extract_text_from_pdf(file_path)
 
     new_resume = Resume(user_id=1, file_path=file_path, extracted_text=extracted_text)
+
     db.add(new_resume)
     db.commit()
     db.refresh(new_resume)
@@ -164,6 +170,12 @@ def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
         saved_questions.append({"question": q["question"], "category": q.get("category")})
 
     db.commit()
+
+    new_session = Session(user_id=1, resume_id=new_resume.id)
+
+    db.add(new_session)
+    db.commit()
+    db.refresh(new_session)
 
     return {
         "resume_id": new_resume.id,

@@ -36,6 +36,15 @@ class Question(Base):
     
     resume = relationship("Resume", back_populates="questions")
 
+class Session(Base):
+    __tablename__ = "sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    resume_id = Column(Integer, ForeignKey("resumes.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 
 
 
