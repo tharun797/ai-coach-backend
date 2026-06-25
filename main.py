@@ -130,21 +130,10 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 
     expire = datetime.utcnow() + timedelta(days=7)
     token = jwt.encode({"sub": data.email, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
-
-    return {"access_token": token, "token_type": "bearer", "id": user.id, "email": user.email, "name": user.name}
-
-
-@app.get("/user/data")
-def getUserData(id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id ==  id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
     resume_count = db.query(Resume).filter(Resume.user_id == id).count()
-    return {
-        "name" : user.name,
-        "resumeCount": resume_count,
-    }
+
+
+    return {"access_token": token, "token_type": "bearer", "id": user.id, "email": user.email, "name": user.name, "resumeCount": resume_count,}
 
 
 
