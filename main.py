@@ -5,7 +5,7 @@ import bcrypt
 from jose import jwt
 from sqlalchemy.orm import Session
 from database import engine, Base, get_db
-from models import User, Resume, Question
+from models import User, Resume, Question, Session
 from datetime import datetime, timedelta
 import os
 import shutil
@@ -131,9 +131,10 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     expire = datetime.utcnow() + timedelta(days=7)
     token = jwt.encode({"sub": data.email, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
     resume_count = db.query(Resume).filter(Resume.user_id == user.id).count()
+    session_count = db.query(Session).filter(Session.user_id == user.id).count()
 
 
-    return {"access_token": token, "token_type": "bearer", "id": user.id, "email": user.email, "name": user.name, "resumeCount": resume_count,}
+    return {"access_token": token, "token_type": "bearer", "id": user.id, "email": user.email, "name": user.name, "resumeCount": resume_count, "session_count": session_count}
 
 
 @app.post("/session")
