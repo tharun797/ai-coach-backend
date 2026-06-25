@@ -136,7 +136,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 
 @app.get("/user/data")
 def getUserData(id: int, db: Session = Depends(get_db)):
-    user = db.query(id).filter(User.id ==  id).first()
+    user = db.query(User).filter(User.id ==  id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
