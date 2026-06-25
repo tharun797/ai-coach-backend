@@ -36,7 +36,7 @@ class Question(Base):
     
     resume = relationship("Resume", back_populates="questions")
 
-class Session(Base):
+class InterviewSession(Base):
     __tablename__ = "sessions"
 
     id = Column(Integer, primary_key=True, index=True)

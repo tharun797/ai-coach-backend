@@ -5,7 +5,7 @@ import bcrypt
 from jose import jwt
 from sqlalchemy.orm import Session
 from database import engine, Base, get_db
-from models import User, Resume, Question, Session
+from models import User, Resume, Question, InterviewSession
 from datetime import datetime, timedelta
 import os
 import shutil
@@ -131,15 +131,32 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     expire = datetime.utcnow() + timedelta(days=7)
     token = jwt.encode({"sub": data.email, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
     resume_count = db.query(Resume).filter(Resume.user_id == user.id).count()
-    session_count = db.query(Session).filter(Session.user_id == user.id).count()
+    session_count = db.query(InterviewSession).filter(InterviewSession.user_id == user.id).count()
 
 
     return {"access_token": token, "token_type": "bearer", "id": user.id, "email": user.email, "name": user.name, "resumeCount": resume_count, "session_count": session_count}
 
 
-@app.post("/session")
-def updateSession(id: id, db: Session = Depends(get_db)):
-    user = db.query(User)
+# Add the missing endpoints
+@app.get("/session/{session_id}")
+def getSession(session_id: int, db: Session = Depends(get_db)):
+    session = db.query(InterviewSession).filter(InterviewSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    questions = db.query(Question).filter(Question.resume_id == session.resume_id).all()
+    return {
+        "session_id": session.id,
+        "resume_id": session.resume_id,
+        "questions": [{"id": q.id, "question": q.question_text, "category": q.category} for q in questions]
+    }
+
+@app.get("/sessions/{user_id}")
+def getUserSessions(user_id: int, db: Session = Depends(get_db)):
+    sessions = db.query(InterviewSession).filter(InterviewSession.user_id == user_id).all()
+    return [
+        {"session_id": s.id, "resume_id": s.resume_id, "created_at": s.created_at}
+        for s in sessions
+    ]
 
 
 @app.post("/resume/upload")
