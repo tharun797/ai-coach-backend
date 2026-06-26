@@ -161,43 +161,49 @@ def getUserSessions(user_id: int, db: Session = Depends(get_db)):
 
 @app.post("/resume/upload")
 def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    try:
+        file_path = os.path.join(UPLOAD_DIR, file.filename)
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-    extracted_text = extract_text_from_pdf(file_path)
+        extracted_text = extract_text_from_pdf(file_path)
 
-    new_resume = Resume(user_id=1, file_path=file_path, extracted_text=extracted_text)
+        new_resume = Resume(user_id=1, file_path=file_path, extracted_text=extracted_text)
 
-    db.add(new_resume)
-    db.commit()
-    db.refresh(new_resume)
+        db.add(new_resume)
+        db.commit()
+        db.refresh(new_resume)
 
-    questions_data = generative_questions(extracted_text)
+        questions_data = generative_questions(extracted_text)
 
-    ##save questions to db
-    saved_questions = []
-    for q in questions_data:
-        question = Question(
-            resume_id=new_resume.id,
-            question_text=q['question'],
-            category=q.get("category", "General"),
-        )
-        db.add(question)
-        saved_questions.append({"question": q["question"], "category": q.get("category")})
+        ##save questions to db
+        saved_questions = []
+        for q in questions_data:
+            question = Question(
+                resume_id=new_resume.id,
+                question_text=q['question'],
+                category=q.get("category", "General"),
+            )
+            db.add(question)
+            saved_questions.append({"question": q["question"], "category": q.get("category")})
 
-    db.commit()
+        db.commit()
 
-    new_session = Session(user_id=1, resume_id=new_resume.id)
+        new_session = Session(user_id=1, resume_id=new_resume.id)
 
-    db.add(new_session)
-    db.commit()
-    db.refresh(new_session)
+        db.add(new_session)
+        db.commit()
+        db.refresh(new_session)
 
-    return {
-        "resume_id": new_resume.id,
-        "message": "Resume uploaded successfully!",
-        "questions": saved_questions,
-        "extracted_text_preview": extracted_text[:300]
-    }
+        return {
+            "resume_id": new_resume.id,
+            "message": "Resume uploaded successfully!",
+            "questions": saved_questions,
+            "extracted_text_preview": extracted_text[:300]
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    
