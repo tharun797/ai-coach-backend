@@ -160,7 +160,7 @@ def getUserSessions(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/resume/upload")
-def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
+def upload_resume(user_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
         file_path = os.path.join(UPLOAD_DIR, file.filename)
 
@@ -169,7 +169,7 @@ def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
 
         extracted_text = extract_text_from_pdf(file_path)
 
-        new_resume = Resume(user_id=1, file_path=file_path, extracted_text=extracted_text)
+        new_resume = Resume(user_id=user_id, file_path=file_path, extracted_text=extracted_text)
 
         db.add(new_resume)
         db.commit()
@@ -190,17 +190,23 @@ def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
 
         db.commit()
 
-        new_session = InterviewSession(user_id=1, resume_id=new_resume.id)
+        new_session = InterviewSession(user_id=user_id, resume_id=new_resume.id)
 
         db.add(new_session)
         db.commit()
         db.refresh(new_session)
 
+        resume_count = db.query(Resume).filter(Resume.user_id==user_id).count()
+        session_count = db.query(InterviewSession).filter(InterviewSession.user_id == user_id).count() 
+
+
         return {
             "resume_id": new_resume.id,
+            "sessionCount": session_count,
+            "resumeCount": resume_count,
             "message": "Resume uploaded successfully!",
             "questions": saved_questions,
-            "extracted_text_preview": extracted_text[:300]
+            "extracted_text_preview": extracted_text[:300],
         }
 
     except Exception as e:
