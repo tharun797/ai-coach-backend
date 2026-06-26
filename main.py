@@ -190,7 +190,7 @@ def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
 
         db.commit()
 
-        new_session = Session(user_id=1, resume_id=new_resume.id)
+        new_session = InterviewSession(user_id=1, resume_id=new_resume.id)
 
         db.add(new_session)
         db.commit()
