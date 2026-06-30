@@ -132,9 +132,27 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     token = jwt.encode({"sub": data.email, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
     resume_count = db.query(Resume).filter(Resume.user_id == user.id).count()
     session_count = db.query(InterviewSession).filter(InterviewSession.user_id == user.id).count() 
+    sessions = db.query(InterviewSession).filter(InterviewSession.user_id == user.id).all()
 
 
-    return {"access_token": token, "token_type": "bearer", "id": user.id, "email": user.email, "name": user.name, "resumeCount": resume_count, "sessionCount": session_count}
+    session_data = []
+    for s in sessions:
+        questions = db.query(Question).filter(Question.resume_id == s.resume_id).all()
+        session_data.append({
+            "session_id": s.id,
+            "resume_id": s.resume_id,
+            "created_at": s.created_at,
+            "questions": [
+                {
+                    "id": q.id, "question": q.question_text, "category": q.category
+                }
+                for q in questions
+            ]
+        })
+
+
+
+    return {"access_token": token, "token_type": "bearer", "id": user.id, "email": user.email, "name": user.name, "resumeCount": resume_count, "sessionCount": session_count, "sessions": session_data}
 
 
 # Add the missing endpoints
